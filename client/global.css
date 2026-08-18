@@ -1,0 +1,128 @@
+/** @import must precede all other statements */
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,800;1,400;1,700;1,800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /**
+   * THE FORGE Brand Colors
+   * Black Carbon: #23282D (hsl(214, 12%, 16%))
+   * Steel Gray: #7D8782 (hsl(99, 5%, 53%))
+   * Periglacial Light: #DCE6D7 (hsl(104, 19%, 86%))
+   * Molten Red: #E63946 (hsl(354, 87%, 58%))
+   *
+   * tailwind.config.ts expects the following color variables to be expressed as HSL values.
+   * A different format will require also updating the theme in tailwind.config.ts.
+  */
+  :root {
+    --background: 214 12% 16%;
+    --foreground: 104 19% 86%;
+
+    --card: 214 12% 16%;
+    --card-foreground: 104 19% 86%;
+
+    --popover: 214 12% 16%;
+    --popover-foreground: 104 19% 86%;
+
+    --primary: 354 87% 58%;
+    --primary-foreground: 214 12% 16%;
+
+    --secondary: 99 5% 53%;
+    --secondary-foreground: 104 19% 86%;
+
+    --muted: 99 5% 53%;
+    --muted-foreground: 104 19% 86%;
+
+    --accent: 354 87% 58%;
+    --accent-foreground: 214 12% 16%;
+
+    --destructive: 354 87% 58%;
+    --destructive-foreground: 104 19% 86%;
+
+    --border: 99 5% 53%;
+    --input: 214 12% 16%;
+    --ring: 354 87% 58%;
+
+    --radius: 0rem;
+
+    --sidebar-background: 214 12% 16%;
+    --sidebar-foreground: 104 19% 86%;
+    --sidebar-primary: 354 87% 58%;
+    --sidebar-primary-foreground: 214 12% 16%;
+    --sidebar-accent: 354 87% 58%;
+    --sidebar-accent-foreground: 104 19% 86%;
+    --sidebar-border: 99 5% 53%;
+    --sidebar-ring: 354 87% 58%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    font-family: "Montserrat", sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-title font-extrabold italic;
+    font-family: "Montserrat", sans-serif;
+    letter-spacing: -0.02em;
+  }
+
+  h1 {
+    @apply text-4xl md:text-6xl lg:text-7xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-5xl lg:text-6xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-4xl;
+  }
+
+  :where(p, span, li, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    font-family: "Montserrat", sans-serif;
+    font-style: italic;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Industrial texture overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+      repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.03) 0px,
+        rgba(255, 255, 255, 0.03) 1px,
+        transparent 1px,
+        transparent 2px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.02) 0px,
+        rgba(255, 255, 255, 0.02) 1px,
+        transparent 1px,
+        transparent 2px
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+}
