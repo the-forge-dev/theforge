@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronDown, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/lib/context/ThemeContext";
+import { Footer } from "@/components/Footer";
 
 interface FAQItem {
   question: string;
@@ -87,6 +89,8 @@ function FAQAccordion() {
 }
 
 export default function FAQ() {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="bg-background text-foreground relative z-10 w-full min-h-screen">
       {/* Header */}
@@ -94,16 +98,25 @@ export default function FAQ() {
         <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer">
             <img
-              src="/logo.png"
+              src={theme === "light" ? "/imagotipo-dark.svg" : "/imagotipo.svg"}
               alt="THE FORGE"
-              className="h-8 sm:h-10 w-auto"
+              className="h-8 sm:h-11 w-auto"
               draggable="false"
               style={{ pointerEvents: 'none' }}
             />
           </Link>
-          <Link to="/" className="text-foreground/70 hover:text-primary transition">
-            <ChevronLeft size={24} />
-          </Link>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              className="text-foreground hover:text-primary transition p-2 border border-secondary/30"
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            <Link to="/" className="text-foreground/70 hover:text-primary transition">
+              <ChevronLeft size={24} />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -119,14 +132,7 @@ export default function FAQ() {
         <FAQAccordion />
       </div>
 
-      {/* Footer */}
-      <footer className="bg-background border-t border-secondary/20 py-8 sm:py-12">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-xs sm:text-sm text-foreground/70 italic">
-            The Forge © 2026 / Built Under Pressure
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

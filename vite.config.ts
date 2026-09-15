@@ -12,6 +12,12 @@ export default defineConfig(({ mode }) => ({
       allow: ["./client", "./shared", "index.html"],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
     },
+    watch: {
+      // Carpeta donde se sueltan imágenes manualmente (incluye descargas parciales
+      // .crdownload que bloquean el archivo en Windows) — no debe activar reinicios
+      // ni tumbar el watcher de Vite.
+      ignored: ["**/imagenes-nuevas/**"],
+    },
   },
   build: {
     outDir: "dist/spa",

@@ -1,18 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { LogOut, Plus, Edit2, Trash2, Eye, EyeOff, AlertCircle, Menu, X as XIcon } from "lucide-react";
+import { LogOut, Plus, Edit2, Trash2, Eye, EyeOff, AlertCircle, Menu, X as XIcon, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useMaintenanceMode } from "@/hooks/use-maintenance";
 import { getProducts, createProduct, updateProduct, deleteProduct, type Product } from "@/lib/services/products";
-import { uploadProductImage } from "@/lib/services/storage";
 import { useToast } from "@/hooks/use-toast";
 import { ProductForm } from "@/components/ProductForm";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
+import { useTheme } from "@/lib/context/ThemeContext";
 
 export default function Admin() {
   const { user, isLoggedIn, login, logout, loading: authLoading } = useAuth();
   const { maintenanceMode, loading: maintenanceLoading, error: maintenanceError, tableExists, fetchMaintenanceMode, toggleMaintenanceMode } = useMaintenanceMode();
   const { toast } = useToast();
+  const { theme, toggleTheme } = useTheme();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -127,78 +128,12 @@ export default function Admin() {
     setIsFormOpen(true);
   };
 
-  const handleSaveProduct = async (formData: Partial<Product>, imageFile?: File | null) => {
-    if (!formData.name || !formData.price) {
-      toast({
-        title: "Error",
-        description: "Completa los campos requeridos",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.has_variants && (!formData.variants || formData.variants.length === 0)) {
-      toast({
-        title: "Error",
-        description: "Agrega al menos una variante al producto",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!editingProduct && !imageFile) {
-      toast({
-        title: "Error",
-        description: "Sube una imagen para el nuevo producto",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  // ProductForm ya resuelve internamente la subida de todas las imágenes
+  // (principal, variantes y tablas nutrimentales) antes de llamar a onSave,
+  // así que aquí solo queda persistir el producto ya resuelto.
+  const handleSaveProduct = async (productData: Partial<Product>) => {
     try {
       setUploadingImage(true);
-      let imageUrl = formData.image_url;
-
-      if (imageFile) {
-        const tempId = editingProduct?.id || "temp-" + Date.now();
-        imageUrl = await uploadProductImage(imageFile, tempId);
-      }
-
-      const productId = editingProduct?.id || "temp-" + Date.now();
-      const variants = await Promise.all(
-        (formData.variants || []).map(async (variant) => {
-          let variantImageUrl = variant.image_url;
-
-          // Si image_url es undefined, significa que fue eliminada
-          if (variant.image_url === undefined) {
-            variantImageUrl = undefined;
-          } else if (variant.image_url && variant.image_url.startsWith("data:")) {
-            // Si es base64, subir a storage
-            const file = new File(
-              [await fetch(variant.image_url).then(r => r.blob())],
-              `variant-${variant.id}.jpg`
-            );
-            variantImageUrl = await uploadProductImage(file, `${productId}-${variant.id}`);
-          }
-
-          return {
-            ...variant,
-            image_url: variantImageUrl,
-          };
-        })
-      );
-
-      const productData = {
-        name: formData.name!,
-        description: formData.description || "",
-        price: formData.price!,
-        image_url: imageUrl!,
-        category: formData.category || PRODUCT_CATEGORIES[0],
-        quantity: formData.has_variants ? 0 : (formData.quantity || 0),
-        has_variants: formData.has_variants || false,
-        variants: variants,
-        is_bestseller: formData.is_bestseller || false,
-      };
 
       if (editingProduct?.id) {
         const updated = await updateProduct(editingProduct.id, productData);
@@ -208,7 +143,7 @@ export default function Admin() {
           description: "Producto actualizado",
         });
       } else {
-        const created = await createProduct(productData);
+        const created = await createProduct(productData as Omit<Product, "id" | "created_at" | "updated_at">);
         setProducts([...products, created]);
         toast({
           title: "Éxito",
@@ -263,12 +198,19 @@ export default function Admin() {
   if (!isLoggedIn) {
     return (
       <div className="bg-background text-foreground relative z-10 w-full min-h-screen flex items-center justify-center">
+        <button
+          onClick={toggleTheme}
+          aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          className="absolute top-4 right-4 text-foreground hover:text-primary transition p-2 border border-secondary/30"
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
         <div className="w-full max-w-md mx-auto px-4">
           <div className="text-center mb-12">
             <img
-              src="/logo.png"
+              src={theme === "light" ? "/imagotipo-dark.svg" : "/imagotipo.svg"}
               alt="THE FORGE"
-              className="h-16 w-auto mx-auto mb-6"
+              className="h-14 w-auto mx-auto mb-6"
               draggable="false"
             />
             <h1 className="text-4xl font-extrabold italic uppercase mb-2">
@@ -349,9 +291,9 @@ export default function Admin() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer">
             <img
-              src="/logo.png"
+              src={theme === "light" ? "/imagotipo-dark.svg" : "/imagotipo.svg"}
               alt="THE FORGE"
-              className="h-8 sm:h-10 w-auto"
+              className="h-8 sm:h-11 w-auto"
               draggable="false"
               style={{ pointerEvents: 'none' }}
             />
@@ -360,6 +302,14 @@ export default function Admin() {
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-4">
             <span className="text-xs text-foreground/70 italic">{user?.email}</span>
+
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              className="text-foreground hover:text-primary transition p-2 border border-secondary/30"
+            >
+              {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
 
             {maintenanceMode !== null && (
               <button
@@ -401,6 +351,14 @@ export default function Admin() {
             <div className="text-xs text-foreground/70 italic truncate">
               {user?.email}
             </div>
+
+            <button
+              onClick={toggleTheme}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 font-bold italic text-sm text-foreground border border-secondary/30 hover:text-primary transition"
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}
+            </button>
 
             {maintenanceMode !== null && (
               <button

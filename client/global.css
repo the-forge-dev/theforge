@@ -55,6 +55,79 @@
     --sidebar-accent-foreground: 104 19% 86%;
     --sidebar-border: 99 5% 53%;
     --sidebar-ring: 354 87% 58%;
+
+    /**
+     * Jerarquía de superficies (modo oscuro): variantes más oscuras que el
+     * "Black Carbon" de marca (#23282D, que aquí pasa a ser la superficie
+     * "elevated"/hover) para dar profundidad real entre fondo, tarjetas y
+     * controles en vez de un solo gris plano repetido en todas partes.
+     * surface-page   #101316  (fondo general, más oscuro que Black Carbon)
+     * surface-nav    #151A1E  (franjas/controles sobre el fondo)
+     * surface-card   #1A2024  (tarjetas de producto)
+     * surface-elevated = Black Carbon (#23282D), para hover/estados elevados
+     */
+    --surface-page: 210 16% 7%;
+    --surface-nav: 207 18% 10%;
+    --surface-card: 204 16% 12%;
+    --surface-elevated: 214 12% 16%;
+    --surface-border: 104 19% 86%;
+  }
+
+  /**
+   * Modo claro (Day): se invierten Shark y Periglacial.
+   * Gunsmoke se mantiene igual en ambos modos.
+   * Molten Red se reemplaza por Shark (Black Carbon, #23282D) en todo lo
+   * que antes usaba primary/accent/destructive/ring: en modo claro el rojo
+   * de marca deja de usarse como color funcional, solo modo oscuro lo usa.
+   */
+  :root[data-theme="light"] {
+    --background: 80 13% 95.5%;
+    --foreground: 214 12% 16%;
+
+    --card: 80 13% 95.5%;
+    --card-foreground: 214 12% 16%;
+
+    --popover: 80 13% 95.5%;
+    --popover-foreground: 214 12% 16%;
+
+    --primary: 214 12% 16%;
+    --primary-foreground: 104 19% 86%;
+
+    --secondary: 99 5% 53%;
+    --secondary-foreground: 214 12% 16%;
+
+    --muted: 99 5% 53%;
+    --muted-foreground: 214 12% 16%;
+
+    --accent: 214 12% 16%;
+    --accent-foreground: 104 19% 86%;
+
+    --destructive: 214 12% 16%;
+    --destructive-foreground: 104 19% 86%;
+
+    --border: 99 5% 53%;
+    --input: 80 13% 95.5%;
+    --ring: 214 12% 16%;
+
+    --sidebar-background: 80 13% 95.5%;
+    --sidebar-foreground: 214 12% 16%;
+    --sidebar-primary: 214 12% 16%;
+    --sidebar-primary-foreground: 104 19% 86%;
+    --sidebar-accent: 214 12% 16%;
+    --sidebar-accent-foreground: 104 19% 86%;
+    --sidebar-border: 99 5% 53%;
+    --sidebar-ring: 214 12% 16%;
+
+    /* Modo claro: la jerarquía de superficies no se pidió para este modo,
+       así que se mantiene igual al fondo actual salvo una superficie "card"
+       y "elevated" apenas distintas, para que el hover no quede inerte.
+       surface-card y surface-elevated conservan el mismo offset relativo
+       que tenían contra el fondo anterior, ahora aplicado sobre F4F5F2. */
+    --surface-page: 80 13% 95.5%;
+    --surface-nav: 80 13% 95.5%;
+    --surface-card: 80 13% 91.5%;
+    --surface-elevated: 99 5% 87.5%;
+    --surface-border: 214 12% 16%;
   }
 }
 
@@ -66,6 +139,7 @@
   body {
     @apply bg-background text-foreground font-body;
     font-family: "Montserrat", sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {

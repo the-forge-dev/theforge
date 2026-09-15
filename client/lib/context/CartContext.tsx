@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { type Product } from "@/lib/services/products";
+import { MAX_UNITS_PER_PRODUCT } from "@/lib/constants/cart";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -36,7 +37,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const maxStock = variantId
           ? (product.variants?.find(v => v.id === variantId)?.quantity ?? 0)
           : product.quantity;
-        const newQuantity = Math.min(existing.quantity + 1, maxStock);
+        const cap = Math.min(maxStock, MAX_UNITS_PER_PRODUCT);
+        const newQuantity = Math.min(existing.quantity + 1, cap);
         if (newQuantity === existing.quantity) {
           return prev;
         }
@@ -68,7 +70,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const maxStock = variantId
           ? (product.variants?.find(v => v.id === variantId)?.quantity ?? 0)
           : product.quantity;
-        const validQuantity = Math.min(quantity, maxStock);
+        const validQuantity = Math.min(quantity, maxStock, MAX_UNITS_PER_PRODUCT);
         setCart((prev) => {
           const cartKey = variantId ? `${productId}-${variantId}` : productId;
           return prev.map((item) => {

@@ -1,12 +1,25 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { ShoppingCart, X, ChevronLeft, ChevronRight, Search, Instagram, Facebook, Music2, MessageCircle, Layers, FileText, HelpCircle } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { X, ChevronLeft, ChevronRight, ChevronDown, Heart, ShoppingCart, LayoutGrid, List as ListIcon, SlidersHorizontal, Flame, Star } from "lucide-react";
 import { getProducts, type Product } from "@/lib/services/products";
 import { ProductModal } from "@/components/ProductModal";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
 import { useCart, type CartItem } from "@/lib/context/CartContext";
+import { MAX_UNITS_PER_PRODUCT } from "@/lib/constants/cart";
+import { useFavorites } from "@/hooks/use-favorites";
 
 const ITEMS_PER_PAGE = 20;
+
+type SortOption = "relevancia" | "precio-asc" | "precio-desc" | "nombre-asc";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  relevancia: "Relevancia",
+  "precio-asc": "Precio: menor a mayor",
+  "precio-desc": "Precio: mayor a menor",
+  "nombre-asc": "Nombre A-Z",
+};
 
 export default function AllProducts() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
@@ -14,13 +27,25 @@ export default function AllProducts() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>("relevancia");
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const { cart, addToCart, removeFromCart, updateQuantity } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     loadProducts();
   }, []);
+
+  // El buscador del navbar navega a /productos?q=... — lo tomamos de la URL
+  // en vez de duplicar la lógica de búsqueda, que ya vive en filteredProducts.
+  useEffect(() => {
+    setSearchQuery(searchParams.get("q") || "");
+    setCurrentPage(1);
+  }, [searchParams]);
 
   const loadProducts = async () => {
     try {
@@ -42,12 +67,52 @@ export default function AllProducts() {
     });
   }, [searchQuery, selectedCategory, allProducts]);
 
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const sortedProducts = useMemo(() => {
+    const arr = [...filteredProducts];
+    switch (sortBy) {
+      case "precio-asc":
+        arr.sort((a, b) => a.price - b.price);
+        break;
+      case "precio-desc":
+        arr.sort((a, b) => b.price - a.price);
+        break;
+      case "nombre-asc":
+        arr.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+    return arr;
+  }, [filteredProducts, sortBy]);
+
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(
+  const paginatedProducts = sortedProducts.slice(
     startIndex,
     startIndex + ITEMS_PER_PAGE
   );
+
+  const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
+    e.stopPropagation();
+    if (product.has_variants) {
+      // Con variantes hace falta elegir sabor/tamaño, así que abrimos la ficha
+      setSelectedProduct(product);
+      return;
+    }
+    addToCart(product);
+  };
+
+  const getBadge = (product: Product): { label: string; className: string; icon?: boolean } | null => {
+    if (product.is_bestseller) {
+      return { label: "Más vendido", className: "bg-amber-500 text-black", icon: true };
+    }
+    if (product.has_variants) {
+      return { label: "Variantes", className: "bg-primary text-primary-foreground" };
+    }
+    return null;
+  };
+
+  // $949, $1,029 — formato de miles sin alterar el valor real del precio.
+  const formatPrice = (price: number) =>
+    `$${price.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`;
 
   const getCartQuantity = (productId: string) => {
     return cart.find((item) => item.id === productId)?.quantity || 0;
@@ -57,10 +122,10 @@ export default function AllProducts() {
     const product = allProducts.find(p => p.id === item.id);
     if (!product) return 0;
 
-    if (item.selectedVariantId && product.variants) {
-      return product.variants.find(v => v.id === item.selectedVariantId)?.quantity ?? 0;
-    }
-    return product.quantity;
+    const stock = item.selectedVariantId && product.variants
+      ? (product.variants.find(v => v.id === item.selectedVariantId)?.quantity ?? 0)
+      : product.quantity;
+    return Math.min(stock, MAX_UNITS_PER_PRODUCT);
   };
 
   const total = cart.reduce((sum, item) => sum + (item.itemPrice || item.price) * item.quantity, 0);
@@ -88,79 +153,86 @@ export default function AllProducts() {
   };
 
   return (
-    <div className="bg-background text-foreground relative z-10 w-full min-h-screen">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur border-b border-secondary/30">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer">
-            <img
-              src="/logo.png"
-              alt="THE FORGE"
-              className="h-8 sm:h-10 w-auto"
-              draggable="false"
-              style={{ pointerEvents: 'none' }}
-            />
-          </Link>
+    <div className="bg-surface-page text-foreground relative z-10 w-full min-h-screen">
+      <Header cartCount={cartCount} onCartClick={() => setIsCartOpen(!isCartOpen)} />
 
-          <button
-            onClick={() => setIsCartOpen(!isCartOpen)}
-            className="relative flex items-center gap-2 bg-primary text-primary-foreground px-3 sm:px-4 py-2 font-bold italic hover:bg-opacity-90 transition-all text-sm sm:text-base"
-          >
-            <ShoppingCart size={20} />
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-secondary text-foreground w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold">
-                {cartCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="pt-20 sm:pt-28 pb-20 max-w-7xl mx-auto px-4">
-        {/* Title */}
-        <div className="mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold italic uppercase mb-2 sm:mb-4">
+      {/* Hero / banner de la sección de productos: la barra de navegación (fixed, arriba)
+          queda sólida sobre el fondo de la página; el banner empieza justo debajo, sin que
+          la imagen se asome por detrás del header. */}
+      <section className="relative w-full h-[210px] sm:h-[225px] md:h-[250px] pt-14 sm:pt-16 overflow-hidden bg-surface-page">
+        <div
+          className="absolute inset-x-0 top-14 sm:top-[77px] bottom-0"
+          style={{
+            backgroundImage: "url('/products-hero-bg.webp')",
+            backgroundSize: "cover",
+            backgroundPosition: "right 38%",
+          }}
+        />
+        {/* Desvanecido horizontal: la foto "emerge" del fondo sólido del hero (misma
+            variable --surface-page del tema) en vez de un corte recto. */}
+        <div
+          className="absolute inset-x-0 top-14 sm:top-[77px] bottom-0"
+          style={{
+            backgroundImage: `linear-gradient(
+              90deg,
+              hsl(var(--surface-page)) 0%,
+              hsl(var(--surface-page)) 45%,
+              hsl(var(--surface-page) / 0.55) 60%,
+              hsl(var(--surface-page) / 0.12) 75%,
+              transparent 88%
+            )`,
+          }}
+        />
+        {/* Desvanecido vertical: la foto también se funde hacia abajo con el fondo,
+            para que el hero se sienta continuo con la toolbar en vez de un
+            rectángulo con un borde inferior duro. */}
+        <div
+          className="absolute inset-x-0 top-14 sm:top-[77px] bottom-0"
+          style={{
+            backgroundImage: `linear-gradient(
+              to bottom,
+              transparent 0%,
+              transparent 65%,
+              hsl(var(--surface-page) / 0.35) 78%,
+              hsl(var(--surface-page) / 0.8) 90%,
+              hsl(var(--surface-page)) 100%
+            )`,
+          }}
+        />
+        <div className="relative z-10 h-full max-w-[1920px] mx-auto px-6 lg:px-[60px] flex flex-col justify-center pt-6 sm:pt-8">
+          <p className="text-primary font-semibold italic uppercase text-xs sm:text-sm tracking-[0.2em] mb-4">
+            Suplementos
+          </p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[57px] font-extrabold italic uppercase leading-none mb-3 drop-shadow-lg">
             Todos Los Productos
           </h1>
-          <p className="text-foreground/70 italic text-sm sm:text-base md:text-lg">
-            {loadingProducts ? "Cargando..." : `Encontramos ${filteredProducts.length} producto${filteredProducts.length !== 1 ? 's' : ''}`}
+          <p className="text-foreground/80 italic text-xs sm:text-sm md:text-base max-w-[490px] leading-relaxed drop-shadow-md">
+            Potencia tu rendimiento. Encuentra los mejores suplementos, de las mejores marcas.
           </p>
         </div>
+      </section>
 
-        {/* Layout Container - Grid for desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
-          {/* Sidebar Filters - Hidden on mobile, shown on lg screens */}
-          <div className="hidden lg:block space-y-6">
-            {/* Search */}
-            <div className="relative sticky top-28">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-foreground/50" size={20} />
-              <input
-                type="text"
-                placeholder="Buscar..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                disabled={loadingProducts}
-                className="w-full bg-background border border-secondary/30 px-10 py-3 text-sm text-foreground italic placeholder:text-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all disabled:opacity-50"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold italic uppercase text-primary">Categorías</h3>
-              <div className="space-y-2">
+      {/* Main Content */}
+      <div className="pb-20 max-w-[1920px] mx-auto px-6 lg:px-[60px]">
+        {/* Barra de filtros: categorías, orden y vista */}
+        <div className="mt-[10px] mb-4 space-y-3">
+          {/* Fila 1: Filtrar + categorías (una sola línea, sin wrap) + Ordenar pegado a la derecha */}
+          <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
+            <div className="flex items-center gap-6 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex-shrink-0 flex items-center justify-center gap-2.5 h-12 w-[155px] px-4 rounded border border-surface-border/20 text-foreground/80 text-sm font-semibold not-italic uppercase">
+                <SlidersHorizontal size={18} />
+                Filtrar
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => {
                     setSelectedCategory(null);
                     setCurrentPage(1);
                   }}
-                  className={`w-full text-left px-4 py-2 text-xs font-bold italic uppercase transition-all ${
+                  className={`flex-shrink-0 h-11 px-4 rounded text-sm font-medium not-italic uppercase transition-all ${
                     selectedCategory === null
                       ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/30 text-foreground hover:bg-secondary/50"
+                      : "bg-surface-card text-foreground hover:bg-surface-elevated"
                   }`}
                 >
                   Todas
@@ -172,10 +244,10 @@ export default function AllProducts() {
                       setSelectedCategory(category);
                       setCurrentPage(1);
                     }}
-                    className={`w-full text-left px-4 py-2 text-xs font-bold italic uppercase transition-all ${
+                    className={`flex-shrink-0 h-11 px-4 rounded text-sm font-medium not-italic uppercase transition-all whitespace-nowrap ${
                       selectedCategory === category
                         ? "bg-primary text-primary-foreground"
-                        : "bg-secondary/30 text-foreground hover:bg-secondary/50"
+                        : "bg-surface-card text-foreground hover:bg-surface-elevated"
                     }`}
                   >
                     {category}
@@ -183,142 +255,244 @@ export default function AllProducts() {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Mobile Search and Filter */}
-          <div className="lg:hidden mb-8 space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-foreground/50" size={20} />
-              <input
-                type="text"
-                placeholder="Buscar por nombre..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                disabled={loadingProducts}
-                className="w-full bg-background border border-secondary/30 px-10 sm:px-12 py-3 sm:py-4 text-sm sm:text-base text-foreground italic placeholder:text-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all disabled:opacity-50"
-              />
-            </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
+            {/* Ordenar por: pegado al extremo derecho, nunca se encoge */}
+            <div className="relative flex-shrink-0 w-full sm:w-auto sm:ml-2">
               <button
-                onClick={() => {
-                  setSelectedCategory(null);
-                  setCurrentPage(1);
-                }}
-                className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold italic uppercase transition-all ${
-                  selectedCategory === null
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary/30 text-foreground hover:bg-secondary/50"
-                }`}
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className="w-full sm:w-[220px] flex items-center justify-between gap-3 h-12 rounded bg-surface-card border border-surface-border/20 px-4 text-sm not-italic uppercase hover:border-primary/50 transition-all whitespace-nowrap"
               >
-                Todas
+                <span>
+                  <span className="font-medium">Ordenar: </span>
+                  <span className="font-semibold">{SORT_LABELS[sortBy]}</span>
+                </span>
+                <ChevronDown size={16} className={`flex-shrink-0 transition-transform ${isSortOpen ? "rotate-180" : ""}`} />
               </button>
-              {PRODUCT_CATEGORIES.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => {
-                    setSelectedCategory(category);
-                    setCurrentPage(1);
-                  }}
-                  className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-bold italic uppercase transition-all ${
-                    selectedCategory === category
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary/30 text-foreground hover:bg-secondary/50"
-                  }`}
-                >
-                  {category}
-                </button>
-              ))}
+              {isSortOpen && (
+                <div className="absolute right-0 mt-1 w-64 bg-surface-card border border-surface-border/20 rounded z-10">
+                  {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setSortBy(option);
+                        setIsSortOpen(false);
+                        setCurrentPage(1);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-xs sm:text-sm font-medium not-italic uppercase transition-all ${
+                        sortBy === option
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "hover:bg-surface-elevated"
+                      }`}
+                    >
+                      {SORT_LABELS[option]}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Products Section */}
-          <div className="lg:col-span-3">
-            {/* Loading State */}
-            {loadingProducts ? (
-              <div className="text-center py-12">
-                <p className="text-foreground/70 italic">Cargando productos...</p>
-              </div>
-            ) : (
-              <>
-                {/* Products Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6 mb-10 sm:mb-12">
-              {paginatedProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-background border border-secondary/30 overflow-hidden hover:border-primary/50 transition-all group cursor-pointer flex flex-col h-full"
-                  onClick={() => setSelectedProduct(product)}
-                >
-                  <div className="relative w-full aspect-square overflow-hidden bg-secondary/10">
-                    <img
-                      src={product.image_url}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      draggable="false"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-30"></div>
-                    {product.has_variants && (
-                      <div className="absolute top-2 right-2 bg-primary/90 backdrop-blur-sm px-2 py-1 rounded flex items-center gap-1 text-xs font-bold italic text-primary-foreground">
-                        <Layers size={12} />
-                        Variantes
+          {/* Fila 2: vista, alineada al extremo derecho debajo de Ordenar */}
+          <div className="flex items-center justify-end">
+            {/* Vista: cuadrícula / lista */}
+            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => setViewMode("grid")}
+                aria-label="Vista de cuadrícula"
+                className={`flex items-center justify-center w-9 h-9 rounded transition-all ${viewMode === "grid" ? "bg-primary text-primary-foreground" : "bg-surface-card text-foreground/60 hover:text-foreground"}`}
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                aria-label="Vista de lista"
+                className={`flex items-center justify-center w-9 h-9 rounded transition-all ${viewMode === "list" ? "bg-primary text-primary-foreground" : "bg-surface-card text-foreground/60 hover:text-foreground"}`}
+              >
+                <ListIcon size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Products Section */}
+        {loadingProducts ? (
+          <div className="text-center py-12">
+            <p className="text-foreground/70 italic">Cargando productos...</p>
+          </div>
+        ) : (
+          <>
+            {/* Products Grid / List */}
+            <div
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 sm:mb-12"
+                  : "flex flex-col gap-3 sm:gap-4 mb-10 sm:mb-12"
+              }
+            >
+              {paginatedProducts.map((product) => {
+                const badge = getBadge(product);
+                const isSoldOut = product.quantity === 0 && !product.has_variants;
+
+                if (viewMode === "list") {
+                  return (
+                    <div
+                      key={product.id}
+                      className="rounded bg-surface-card border border-surface-border/10 hover:border-primary/50 hover:bg-surface-elevated transition-all group cursor-pointer flex items-center gap-4 p-3 sm:p-4"
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0 bg-secondary/10 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          draggable="false"
+                        />
                       </div>
-                    )}
-                  </div>
 
-                  <div className="p-3 sm:p-4 flex flex-col flex-1 justify-between">
-                    <div>
-                      <h4 className="text-xs sm:text-sm font-extrabold italic uppercase mb-1 line-clamp-2">
-                        {product.name}
-                      </h4>
-                      <p className="text-foreground/60 italic text-xs mb-2 line-clamp-2">
-                        {product.description}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-center pt-2">
-                      <span className="text-base sm:text-lg font-extrabold text-primary">
-                        ${product.price}
-                      </span>
-                      {product.quantity === 0 && !product.has_variants ? (
-                        <span className="text-xs sm:text-sm font-extrabold text-foreground/50 italic">
-                          Agotado
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {badge && (
+                            <span className={`px-2 py-0.5 text-[10px] font-bold italic uppercase ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          )}
+                          <p className="text-primary/80 text-[10px] sm:text-xs font-bold uppercase italic">
+                            {product.category}
+                          </p>
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-extrabold italic uppercase mb-1 line-clamp-1">
+                          {product.name}
+                        </h4>
+                        <span className="text-base sm:text-lg font-extrabold text-primary">
+                          ${product.price}
                         </span>
-                      ) : (
+                        {isSoldOut && (
+                          <span className="ml-2 text-xs sm:text-sm font-extrabold text-foreground/50 italic">
+                            Agotado
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (product.has_variants) {
-                              setSelectedProduct(product);
-                            } else {
-                              addToCart(product);
-                            }
+                            toggleFavorite(product.id);
                           }}
-                          className="bg-primary text-primary-foreground w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center font-extrabold text-lg hover:bg-opacity-90 transition-all"
+                          aria-label="Favorito"
+                          className="p-2 text-foreground/60 hover:text-primary transition"
                         >
-                          +
+                          <Heart size={18} className={isFavorite(product.id) ? "fill-primary text-primary" : ""} />
                         </button>
+                        <button
+                          onClick={(e) => handleQuickAdd(e, product)}
+                          disabled={isSoldOut}
+                          className="hidden sm:flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 font-extrabold italic uppercase text-xs hover:bg-opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <ShoppingCart size={14} />
+                          Agregar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const hasRating = product.rating != null && product.reviewCount != null;
+
+                return (
+                  <div
+                    key={product.id}
+                    className="rounded bg-surface-card border border-surface-border/10 overflow-hidden hover:border-primary/40 transition-colors duration-200 group cursor-pointer flex flex-col h-full"
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    {/* Zona de imagen: superficie base de la card */}
+                    <div className="relative w-full h-44 sm:h-52 md:h-60 lg:h-72 xl:h-[310px] overflow-hidden bg-surface-card px-5 py-4 flex items-center justify-center">
+                      {badge && (
+                        <div
+                          className={`absolute top-3 left-3 inline-flex items-center gap-1 h-7 px-3 rounded-[6px] text-xs font-semibold not-italic uppercase ${badge.className}`}
+                        >
+                          {badge.icon && <Flame size={12} />}
+                          {badge.label}
+                        </div>
                       )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(product.id);
+                        }}
+                        aria-label="Favorito"
+                        className="absolute top-3 right-3 flex items-center justify-center w-9 h-9 rounded bg-surface-page/40 text-foreground/90 hover:bg-surface-page/70 hover:text-primary transition-colors"
+                      >
+                        <Heart size={16} className={isFavorite(product.id) ? "fill-primary text-primary" : ""} />
+                      </button>
+
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="max-w-full max-h-full object-contain group-hover:scale-[1.02] transition-transform duration-200"
+                        draggable="false"
+                      />
+                    </div>
+
+                    {/* Zona de info: tono apenas más claro que la imagen, para separar sin marcar */}
+                    <div className="bg-surface-elevated/25 p-[18px] flex flex-col flex-1">
+                      <p className="text-secondary text-xs font-medium uppercase tracking-[0.12em] mb-2">
+                        {product.category}
+                      </p>
+                      <h4 className="text-[15px] sm:text-base font-bold not-italic uppercase text-foreground leading-tight mb-3 line-clamp-2 min-h-[40px]">
+                        {product.name}
+                      </h4>
+
+                      {hasRating && (
+                        <div className="flex items-center gap-1 mb-2">
+                          {[1, 2, 3, 4, 5].map((i) => (
+                            <Star
+                              key={i}
+                              size={13}
+                              className={i <= Math.round(product.rating!) ? "fill-primary text-primary" : "text-secondary/30"}
+                            />
+                          ))}
+                          <span className="text-xs text-secondary ml-1">({product.reviewCount})</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-xl sm:text-[22px] font-extrabold text-primary">
+                          {formatPrice(product.price)}
+                        </span>
+                        {isSoldOut && (
+                          <span className="text-xs sm:text-sm font-bold text-foreground/50 not-italic">
+                            Agotado
+                          </span>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => handleQuickAdd(e, product)}
+                        disabled={isSoldOut}
+                        className="mt-auto w-full flex items-center justify-center gap-2 h-11 bg-primary text-primary-foreground font-bold not-italic uppercase text-[13px] hover:bg-opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <ShoppingCart size={16} />
+                        Agregar al Carrito
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-                {paginatedProducts.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-foreground/70 italic text-sm sm:text-base md:text-lg">
-                      {searchQuery ? "No encontramos productos que coincidan con tu búsqueda." : "No hay productos disponibles."}
-                    </p>
-                  </div>
-                )}
+            {paginatedProducts.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-foreground/70 italic text-sm sm:text-base md:text-lg">
+                  {searchQuery ? "No encontramos productos que coincidan con tu búsqueda." : "No hay productos disponibles."}
+                </p>
+              </div>
+            )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
@@ -350,14 +524,12 @@ export default function AllProducts() {
                   className="flex items-center gap-1 sm:gap-2 bg-primary text-primary-foreground px-3 sm:px-4 py-2 font-bold italic text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all"
                 >
                   <span className="hidden sm:inline">Siguiente</span>
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-              </>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Product Detail Modal */}
@@ -367,6 +539,8 @@ export default function AllProducts() {
           onClose={() => setSelectedProduct(null)}
           onAddToCart={addToCart}
           cartQuantity={getCartQuantity(selectedProduct.id)}
+          cartCount={cartCount}
+          onCartClick={() => setIsCartOpen(true)}
         />
       )}
 
@@ -449,7 +623,7 @@ export default function AllProducts() {
                       </p>
                       {item.quantity >= getAvailableStock(item) && (
                         <p className="text-xs text-red-500 italic font-bold">
-                          Límite de stock alcanzado
+                          Cantidad máxima alcanzada
                         </p>
                       )}
                     </div>
@@ -483,75 +657,7 @@ export default function AllProducts() {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="bg-background border-t border-secondary/20 py-8 sm:py-12">
-        <div className="max-w-6xl mx-auto px-4 text-center space-y-4">
-          {/* Social Links */}
-          <div className="flex justify-center items-center gap-4">
-            <a
-              href="https://www.instagram.com/theforgemx?igsh=MXJkdWtoejB3NXpjZQ=="
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground/70 hover:text-primary transition"
-              aria-label="Instagram"
-            >
-              <Instagram size={20} />
-            </a>
-            <a
-              href="https://www.facebook.com/share/1ADFHj1jFi/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground/70 hover:text-primary transition"
-              aria-label="Facebook"
-            >
-              <Facebook size={20} />
-            </a>
-            <a
-              href="https://www.tiktok.com/@theforgemx?_r=1&_t=ZS-97DuWxpR04a"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground/70 hover:text-primary transition"
-              aria-label="TikTok"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.1 1.82 2.89 2.89 0 0 1 2.31-4.64 2.86 2.86 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-.54-.05z"/>
-              </svg>
-            </a>
-            <a
-              href="https://wa.me/4434806689?text=Hola%20THE%20FORGE%20Quiero%20hacer%20un%20pedido"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-foreground/70 hover:text-primary transition"
-              aria-label="WhatsApp"
-            >
-              <MessageCircle size={20} />
-            </a>
-          </div>
-
-          {/* Policy and FAQ Links */}
-          <div className="flex justify-center items-center gap-4 mb-4">
-            <Link
-              to="/politicas"
-              className="flex items-center gap-2 text-foreground/70 hover:text-primary transition text-xs sm:text-sm font-bold italic"
-            >
-              <FileText size={16} />
-              Política de Privacidad
-            </Link>
-            <div className="w-px h-4 bg-secondary/30"></div>
-            <Link
-              to="/faq"
-              className="flex items-center gap-2 text-foreground/70 hover:text-primary transition text-xs sm:text-sm font-bold italic"
-            >
-              <HelpCircle size={16} />
-              Preguntas Frecuentes
-            </Link>
-          </div>
-
-          <p className="text-xs sm:text-sm text-foreground/70 italic">
-            The Forge © 2026 / Built Under Pressure
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import { AlertTriangle, Instagram, Facebook, MessageCircle } from "lucide-react";
+import { useTheme } from "@/lib/context/ThemeContext";
 
 export default function MaintenancePage() {
+  const { theme } = useTheme();
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background text-foreground overflow-hidden relative">
       {/* Animated background elements using brand colors */}
@@ -15,8 +18,8 @@ export default function MaintenancePage() {
         <div className="mb-8 flex justify-center">
           <img
             alt="THE FORGE"
-            src="/logo.png"
-            className="h-32 w-auto object-contain drop-shadow-lg"
+            src={theme === "light" ? "/imagotipo-dark.svg" : "/imagotipo.svg"}
+            className="h-24 w-auto object-contain drop-shadow-lg"
           />
         </div>
 

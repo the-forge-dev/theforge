@@ -7,6 +7,10 @@ import AllProducts from "@/pages/AllProducts";
 import Admin from "@/pages/Admin";
 import Privacy from "@/pages/Privacy";
 import FAQ from "@/pages/FAQ";
+import Ropa from "@/pages/Ropa";
+import Accesorios from "@/pages/Accesorios";
+import Marcas from "@/pages/Marcas";
+import Blog from "@/pages/Blog";
 import NotFound from "@/pages/NotFound";
 
 export default function AppLayout() {
@@ -21,6 +25,10 @@ export default function AppLayout() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/politicas" element={<Privacy />} />
           <Route path="/faq" element={<FAQ />} />
+          <Route path="/ropa" element={<Ropa />} />
+          <Route path="/accesorios" element={<Accesorios />} />
+          <Route path="/marcas" element={<Marcas />} />
+          <Route path="/blog" element={<Blog />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

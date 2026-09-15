@@ -25,3 +25,10 @@ dist-ssr
 
 .config/
 !.env
+
+# Carpeta local para soltar imágenes fuente antes de procesarlas (no es
+# contenido final del sitio, no debe subirse al repo)
+imagenes-nuevas/
+
+# Config local de Claude Code (launch.json de este entorno de trabajo)
+.claude/
