@@ -297,7 +297,7 @@ export default function AllProducts() {
                           e.stopPropagation();
                           setSelectedProduct(product);
                         }}
-                        className="mt-auto w-full flex items-center justify-center gap-2 h-11 bg-primary text-primary-foreground font-bold not-italic uppercase text-[13px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 hover:bg-opacity-90"
+                        className="mt-auto w-full flex items-center justify-center gap-2 h-11 bg-primary text-primary-foreground font-bold not-italic uppercase text-[13px] opacity-100 pointer-events-auto sm:opacity-0 sm:pointer-events-none sm:group-hover:opacity-100 sm:group-hover:pointer-events-auto transition-opacity duration-200 hover:bg-opacity-90"
                       >
                         Vista Rápida
                       </button>
@@ -321,9 +321,9 @@ export default function AllProducts() {
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
-                  className="flex items-center gap-1 sm:gap-2 bg-primary text-primary-foreground px-3 sm:px-4 py-2 font-bold italic text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all"
+                  className="flex items-center gap-1 sm:gap-2 bg-primary text-primary-foreground px-2 sm:px-3 py-1 sm:py-2 font-bold italic text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={14} />
                   <span className="hidden sm:inline">Anterior</span>
                 </button>
 
@@ -346,10 +346,10 @@ export default function AllProducts() {
                 <button
                   onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
-                  className="flex items-center gap-1 sm:gap-2 bg-primary text-primary-foreground px-3 sm:px-4 py-2 font-bold italic text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all"
+                  className="flex items-center gap-1 sm:gap-2 bg-primary text-primary-foreground px-2 sm:px-3 py-1 sm:py-2 font-bold italic text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-opacity-90 transition-all"
                 >
                   <span className="hidden sm:inline">Siguiente</span>
-                  <ChevronRight size={16} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
             )}
