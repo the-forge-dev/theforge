@@ -210,9 +210,11 @@ export default function Index() {
                           <p className="text-primary/80 text-[10px] sm:text-xs font-bold uppercase italic mb-1">
                             {product.category}
                           </p>
-                          <h4 className="text-sm sm:text-base font-extrabold italic uppercase mb-1 line-clamp-2 h-10 sm:h-12 overflow-hidden">
-                            {product.name}
-                          </h4>
+                          <div className="h-10 sm:h-12 overflow-hidden mb-1 [contain:paint]">
+                            <h4 className="text-sm sm:text-base font-extrabold italic uppercase line-clamp-2">
+                              {product.name}
+                            </h4>
+                          </div>
                         </div>
 
                         <div className="flex justify-between items-center pt-2">

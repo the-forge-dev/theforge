@@ -264,9 +264,11 @@ export default function AllProducts() {
                       <p className="text-secondary text-xs font-medium uppercase tracking-[0.12em] mb-2">
                         {product.category}
                       </p>
-                      <h4 className="text-[15px] sm:text-base font-bold not-italic uppercase text-foreground leading-tight mb-3 line-clamp-2 h-10 overflow-hidden">
-                        {product.name}
-                      </h4>
+                      <div className="h-10 overflow-hidden mb-3 [contain:paint]">
+                        <h4 className="text-[15px] sm:text-base font-bold not-italic uppercase text-foreground leading-tight line-clamp-2">
+                          {product.name}
+                        </h4>
+                      </div>
 
                       {hasRating && (
                         <div className="flex items-center gap-1 mb-2">
