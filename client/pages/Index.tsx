@@ -210,7 +210,7 @@ export default function Index() {
                           <p className="text-primary/80 text-[10px] sm:text-xs font-bold uppercase italic mb-1">
                             {product.category}
                           </p>
-                          <h4 className="text-sm sm:text-base font-extrabold italic uppercase mb-1 line-clamp-2">
+                          <h4 className="text-sm sm:text-base font-extrabold italic uppercase mb-1 line-clamp-2 h-10 sm:h-12 overflow-hidden">
                             {product.name}
                           </h4>
                         </div>
