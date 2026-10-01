@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import { type Product } from "@/lib/services/products";
-import { MAX_UNITS_PER_PRODUCT } from "@/lib/constants/cart";
 
 export interface CartItem extends Product {
   quantity: number;
@@ -12,7 +11,7 @@ interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, variantId?: string) => void;
   removeFromCart: (productId: string, variantId?: string) => void;
-  updateQuantity: (productId: string, quantity: number, variantId?: string, products?: Product[]) => void;
+  updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
   clearCart: () => void;
 }
 
@@ -34,17 +33,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
 
       if (existing) {
-        const maxStock = variantId
-          ? (product.variants?.find(v => v.id === variantId)?.quantity ?? 0)
-          : product.quantity;
-        const cap = Math.min(maxStock, MAX_UNITS_PER_PRODUCT);
-        const newQuantity = Math.min(existing.quantity + 1, cap);
-        if (newQuantity === existing.quantity) {
-          return prev;
-        }
         return prev.map((item) => {
           const itemKey = item.selectedVariantId ? `${item.id}-${item.selectedVariantId}` : item.id;
-          return itemKey === cartKey ? { ...item, quantity: newQuantity } : item;
+          return itemKey === cartKey ? { ...item, quantity: item.quantity + 1 } : item;
         });
       }
       return [...prev, { ...product, quantity: 1, selectedVariantId: variantId, itemPrice }];
@@ -61,24 +52,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateQuantity = (productId: string, quantity: number, variantId?: string, products: Product[] = []) => {
+  const updateQuantity = (productId: string, quantity: number, variantId?: string) => {
     if (quantity <= 0) {
       removeFromCart(productId, variantId);
     } else {
-      const product = products.find((p) => p.id === productId);
-      if (product) {
-        const maxStock = variantId
-          ? (product.variants?.find(v => v.id === variantId)?.quantity ?? 0)
-          : product.quantity;
-        const validQuantity = Math.min(quantity, maxStock, MAX_UNITS_PER_PRODUCT);
-        setCart((prev) => {
-          const cartKey = variantId ? `${productId}-${variantId}` : productId;
-          return prev.map((item) => {
-            const itemKey = item.selectedVariantId ? `${item.id}-${item.selectedVariantId}` : item.id;
-            return itemKey === cartKey ? { ...item, quantity: validQuantity } : item;
-          });
+      setCart((prev) => {
+        const cartKey = variantId ? `${productId}-${variantId}` : productId;
+        return prev.map((item) => {
+          const itemKey = item.selectedVariantId ? `${item.id}-${item.selectedVariantId}` : item.id;
+          return itemKey === cartKey ? { ...item, quantity } : item;
         });
-      }
+      });
     }
   };
 

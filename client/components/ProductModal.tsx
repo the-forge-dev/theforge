@@ -2,16 +2,16 @@ import { useState, useEffect, type ReactNode } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Product } from "@/lib/services/products";
-import { MAX_UNITS_PER_PRODUCT } from "@/lib/constants/cart";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { parseDescription } from "@/lib/utils/parseProductDescription";
+import { formatItemLabel } from "@/lib/utils/formatItemLabel";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProductModalProps {
   product: Product;
   onClose: () => void;
   onAddToCart: (product: Product, variant?: string) => void;
-  cartQuantity?: number;
   cartCount: number;
   onCartClick: () => void;
 }
@@ -54,7 +54,8 @@ function AccordionRow({ title, isOpen, onToggle, children }: AccordionRowProps) 
   );
 }
 
-export function ProductModal({ product, onClose, onAddToCart, cartQuantity = 0, cartCount, onCartClick }: ProductModalProps) {
+export function ProductModal({ product, onClose, onAddToCart, cartCount, onCartClick }: ProductModalProps) {
+  const { toast } = useToast();
   const [selectedVariant, setSelectedVariant] = useState<string | null>(
     product.has_variants && product.variants?.length > 0
       ? (product.variants.find(v => v.quantity > 0)?.id || product.variants[0].id)
@@ -117,10 +118,6 @@ export function ProductModal({ product, onClose, onAddToCart, cartQuantity = 0, 
   const currentStock = getAvailableStock();
   const currentPrice = getPrice();
   const isOutOfStock = currentStock === 0;
-  const maxAvailable = Math.max(
-    0,
-    Math.min(currentStock, MAX_UNITS_PER_PRODUCT) - cartQuantity
-  );
 
   const { main: mainDescription, howToUse, perServing, nutritionFactsUrl: descriptionNutritionFactsUrl } = product.description
     ? parseDescription(product.description)
@@ -144,12 +141,15 @@ export function ProductModal({ product, onClose, onAddToCart, cartQuantity = 0, 
   };
 
   const handleAddToCart = () => {
-    if (quantity > 0 && quantity <= maxAvailable) {
-      for (let i = 0; i < quantity; i++) {
-        onAddToCart(product, selectedVariant || undefined);
-      }
-      onClose();
+    for (let i = 0; i < quantity; i++) {
+      onAddToCart(product, selectedVariant || undefined);
     }
+    const variantName = product.variants?.find(v => v.id === selectedVariant)?.name;
+    toast({
+      title: "Agregado al carrito",
+      description: `${formatItemLabel(product.name, variantName)} se agregó correctamente.`,
+    });
+    onClose();
   };
 
   return (
@@ -158,7 +158,7 @@ export function ProductModal({ product, onClose, onAddToCart, cartQuantity = 0, 
       <Header cartCount={cartCount} onCartClick={onCartClick} />
 
       {/* Espaciador para el header fijo + botón volver */}
-      <div className="pt-14 sm:pt-[72px]">
+      <div className="pt-[73px] sm:pt-[89px]">
         <button
           onClick={onClose}
           className="flex items-center gap-1 px-4 sm:px-8 py-3 text-foreground/70 hover:text-primary transition font-bold italic uppercase text-xs sm:text-sm max-w-7xl mx-auto w-full"
@@ -247,7 +247,7 @@ export function ProductModal({ product, onClose, onAddToCart, cartQuantity = 0, 
           </h2>
 
           <div>
-            <p className="text-3xl sm:text-4xl font-extrabold text-primary">
+            <p className="text-3xl sm:text-4xl font-extrabold text-[#E63946]">
               ${currentPrice.toFixed(2)}
             </p>
             {product.has_variants && selectedVariant && currentPrice !== product.price && (
@@ -306,28 +306,19 @@ export function ProductModal({ product, onClose, onAddToCart, cartQuantity = 0, 
                     {quantity}
                   </span>
                   <button
-                    onClick={() => setQuantity(Math.min(maxAvailable, quantity + 1))}
-                    disabled={quantity >= maxAvailable}
-                    className="text-foreground w-10 sm:w-12 h-full font-bold hover:bg-secondary/30 transition text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="text-foreground w-10 sm:w-12 h-full font-bold hover:bg-secondary/30 transition text-lg"
                   >
                     +
                   </button>
                 </div>
                 <button
                   onClick={handleAddToCart}
-                  disabled={quantity === 0 || maxAvailable === 0}
-                  className="flex-1 bg-primary text-primary-foreground px-4 font-extrabold italic uppercase text-xs sm:text-sm hover:bg-opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-primary text-primary-foreground px-4 font-extrabold italic uppercase text-xs sm:text-sm hover:bg-opacity-90 transition-all"
                 >
-                  {maxAvailable === 0
-                    ? "Máximo en el carrito"
-                    : `Agregar $${(currentPrice * quantity).toFixed(2)}`}
+                  {`Agregar $${(currentPrice * quantity).toFixed(2)}`}
                 </button>
               </div>
-              <p className="text-xs text-foreground/60 italic">
-                {quantity >= maxAvailable
-                  ? "Cantidad máxima alcanzada"
-                  : `Máximo ${MAX_UNITS_PER_PRODUCT} piezas por producto en cada compra`}
-              </p>
             </div>
           ) : (
             <div className="bg-secondary/10 border border-secondary/30 p-3 text-center font-extrabold italic uppercase text-foreground/60">

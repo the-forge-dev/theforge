@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { X, ChevronRight, Layers } from "lucide-react";
+import { X, ChevronRight, Layers, Mountain, BarChart3, Zap } from "lucide-react";
 import { getProducts, type Product } from "@/lib/services/products";
 import { ProductModal } from "@/components/ProductModal";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { HeroCarousel, type HeroSlide } from "@/components/HeroCarousel";
-import { useCart, type CartItem } from "@/lib/context/CartContext";
-import { MAX_UNITS_PER_PRODUCT } from "@/lib/constants/cart";
+import { useCart } from "@/lib/context/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useModalBackClose } from "@/hooks/use-modal-back-close";
+import { formatItemLabel } from "@/lib/utils/formatItemLabel";
 
 const HERO_SLIDES: HeroSlide[] = [
   {
@@ -52,8 +53,9 @@ export default function Index() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const { cart, addToCart, removeFromCart, updateQuantity } = useCart();
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart } = useCart();
   const isMobile = useIsMobile();
+  useModalBackClose(!!selectedProduct, () => setSelectedProduct(null));
   const heroSlides = isMobile
     ? HERO_SLIDES.filter((slide) => slide.image !== "/hero-triptych.webp")
     : HERO_SLIDES;
@@ -74,20 +76,6 @@ export default function Index() {
     }
   };
 
-  const getCartQuantity = (productId: string) => {
-    return cart.find((item) => item.id === productId)?.quantity || 0;
-  };
-
-  const getAvailableStock = (item: CartItem): number => {
-    const product = products.find(p => p.id === item.id);
-    if (!product) return 0;
-
-    const stock = item.selectedVariantId && product.variants
-      ? (product.variants.find(v => v.id === item.selectedVariantId)?.quantity ?? 0)
-      : product.quantity;
-    return Math.min(stock, MAX_UNITS_PER_PRODUCT);
-  };
-
   const total = cart.reduce((sum, item) => sum + (item.itemPrice || item.price) * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -95,10 +83,10 @@ export default function Index() {
     const message = cart
       .map((item) => {
         const variantName = item.selectedVariantId
-          ? ` (${item.variants?.find(v => v.id === item.selectedVariantId)?.name})`
-          : "";
+          ? item.variants?.find(v => v.id === item.selectedVariantId)?.name
+          : undefined;
         const itemPrice = item.itemPrice || item.price;
-        return `- ${item.name}${variantName} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
+        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
       })
       .join("\n");
     
@@ -120,39 +108,48 @@ export default function Index() {
       <HeroCarousel slides={heroSlides} />
 
 
-      {/* Values Section */}
-      <section className="py-12 sm:py-20">
-        <div className="max-w-6xl mx-auto px-4">
-          <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold italic uppercase text-center mb-10 sm:mb-16">
-            Valores
-          </h3>
+      {/* Values Section: franja "Lo Que Nos Define", sin cards */}
+      <section className="border-t border-b border-border/20 py-10 sm:py-14">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-secondary text-xs font-semibold not-italic uppercase tracking-[0.25em] text-center mb-6 sm:mb-8">
+            Lo Que Nos Define
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-            <div className="border border-primary/30 p-6 sm:p-8 bg-background/50">
-              <h4 className="text-lg sm:text-xl md:text-2xl font-extrabold italic text-primary uppercase mb-3">
-                Resiliencia
-              </h4>
-              <p className="text-sm sm:text-base text-foreground/80 italic">
-                Capacidad de soportar la presión sin quebrarse.
-              </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/20">
+            <div className="flex items-start gap-4 sm:gap-5 py-6 sm:py-0 first:pt-0 last:pb-0 sm:px-6 lg:px-10 first:sm:pl-0 last:sm:pr-0">
+              <Mountain size={32} strokeWidth={1.5} className="text-foreground flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-extrabold italic uppercase text-foreground text-base sm:text-lg mb-2">
+                  Resiliencia
+                </h4>
+                <p className="text-foreground/70 text-sm sm:text-base leading-relaxed">
+                  Capacidad de soportar la presión sin quebrarse.
+                </p>
+              </div>
             </div>
 
-            <div className="border border-primary/30 p-6 sm:p-8 bg-background/50">
-              <h4 className="text-lg sm:text-xl md:text-2xl font-extrabold italic text-primary uppercase mb-3">
-                Disciplina
-              </h4>
-              <p className="text-sm sm:text-base text-foreground/80 italic">
-                El fuego que mantiene la forja encendida cuando la motivación se apaga.
-              </p>
+            <div className="flex items-start gap-4 sm:gap-5 py-6 sm:py-0 first:pt-0 last:pb-0 sm:px-6 lg:px-10 first:sm:pl-0 last:sm:pr-0">
+              <BarChart3 size={32} strokeWidth={1.5} className="text-foreground flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-extrabold italic uppercase text-foreground text-base sm:text-lg mb-2">
+                  Disciplina
+                </h4>
+                <p className="text-foreground/70 text-sm sm:text-base leading-relaxed">
+                  El fuego que mantiene la forja encendida cuando la motivación se apaga.
+                </p>
+              </div>
             </div>
 
-            <div className="border border-primary/30 p-6 sm:p-8 bg-background/50">
-              <h4 className="text-lg sm:text-xl md:text-2xl font-extrabold italic text-primary uppercase mb-3">
-                Fuerza Real
-              </h4>
-              <p className="text-sm sm:text-base text-foreground/80 italic">
-                No estética, sino funcional y mental.
-              </p>
+            <div className="flex items-start gap-4 sm:gap-5 py-6 sm:py-0 first:pt-0 last:pb-0 sm:px-6 lg:px-10 first:sm:pl-0 last:sm:pr-0">
+              <Zap size={32} strokeWidth={1.5} className="text-foreground flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-extrabold italic uppercase text-foreground text-base sm:text-lg mb-2">
+                  Fuerza Real
+                </h4>
+                <p className="text-foreground/70 text-sm sm:text-base leading-relaxed">
+                  No estética, sino funcional y mental.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -218,7 +215,7 @@ export default function Index() {
                         </div>
 
                         <div className="flex justify-between items-center pt-2">
-                          <span className="text-lg sm:text-xl font-extrabold text-primary">
+                          <span className="text-lg sm:text-xl font-extrabold text-[#E63946]">
                             ${product.price}
                           </span>
                           {product.quantity === 0 && !product.has_variants && (
@@ -255,7 +252,6 @@ export default function Index() {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={addToCart}
-          cartQuantity={getCartQuantity(selectedProduct.id)}
           cartCount={cartCount}
           onCartClick={() => setIsCartOpen(true)}
         />
@@ -269,11 +265,21 @@ export default function Index() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cart Header */}
-            <div className="border-b border-secondary/20 p-4 sm:p-6 flex justify-between items-center">
-              <h2 className="text-xl sm:text-2xl font-extrabold italic uppercase">Tu Carrito</h2>
+            <div className="border-b border-secondary/20 p-4 sm:p-6 flex justify-between items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <h2 className="text-xl sm:text-2xl font-extrabold italic uppercase">Tu Carrito</h2>
+                {cart.length > 0 && (
+                  <button
+                    onClick={clearCart}
+                    className="text-foreground/60 hover:text-primary transition text-xs italic underline flex-shrink-0"
+                  >
+                    Vaciar carrito
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="text-foreground hover:text-primary transition"
+                className="text-foreground hover:text-primary transition flex-shrink-0"
               >
                 <X size={24} />
               </button>
@@ -297,7 +303,7 @@ export default function Index() {
                           {item.name}
                           {item.selectedVariantId && (
                             <span className="text-foreground/70">
-                              {" "}({item.variants?.find(v => v.id === item.selectedVariantId)?.name})
+                              {" · "}{item.variants?.find(v => v.id === item.selectedVariantId)?.name}
                             </span>
                           )}
                         </h4>
@@ -316,7 +322,7 @@ export default function Index() {
                       </span>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedVariantId, products)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedVariantId)}
                           className="bg-secondary/30 text-foreground px-2 py-1 font-bold hover:bg-secondary/50 transition text-xs"
                         >
                           −
@@ -325,9 +331,8 @@ export default function Index() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedVariantId, products)}
-                          disabled={item.quantity >= getAvailableStock(item)}
-                          className="bg-secondary/30 text-foreground px-2 py-1 font-bold hover:bg-secondary/50 transition text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedVariantId)}
+                          className="bg-secondary/30 text-foreground px-2 py-1 font-bold hover:bg-secondary/50 transition text-xs"
                         >
                           +
                         </button>
@@ -338,11 +343,6 @@ export default function Index() {
                       <p className="text-primary font-bold italic text-sm">
                         Subtotal: ${((item.itemPrice || item.price) * item.quantity).toFixed(2)}
                       </p>
-                      {item.quantity >= getAvailableStock(item) && (
-                        <p className="text-xs text-red-500 italic font-bold">
-                          Cantidad máxima alcanzada
-                        </p>
-                      )}
                     </div>
                   </div>
                 ))

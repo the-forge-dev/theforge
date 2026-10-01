@@ -15,26 +15,25 @@ const SOCIAL_LINKS = [
 
 const SHOP_LINKS = [
   { label: "Inicio", to: "/" },
-  { label: "Todos Los Productos", to: "/productos" },
   { label: "Suplementos", to: "/productos" },
-  { label: "Ropa", to: "/ropa" },
-  { label: "Accesorios", to: "/accesorios" },
-  { label: "Marcas", to: "/marcas" },
-  { label: "Blog", to: "/blog" },
+  { label: "Ropa", to: "/ropa", comingSoon: true },
+  { label: "Accesorios", to: "/accesorios", comingSoon: true },
+  { label: "Marcas", to: "/marcas", comingSoon: true },
 ];
 
 // Rutas reales confirmadas en AppLayout.tsx en el momento de este rediseño:
-// / /productos /admin /politicas /faq /ropa /accesorios /marcas /blog
-// "Nosotros", "Términos y Condiciones" y "Envíos y Devoluciones" no existen
-// todavía como páginas — se dejan con href="#" (sin crear contenido legal
-// inventado) hasta que el proyecto tenga esas rutas reales.
+// / /productos /admin /politicas /terminos /envios-y-devoluciones /faq
+// /ropa /accesorios /marcas /blog
+// "Nosotros" apunta a /blog (misma página que el navbar renombró de "Blog" a
+// "Nosotros"). El contenido de /politicas se dividió: Términos y Condiciones
+// y Envíos y Devoluciones ahora son páginas propias con el contenido que
+// antes vivía dentro de Política de Privacidad.
 const COMPANY_LINKS = [
-  { label: "Nosotros", to: null },
+  { label: "Nosotros", to: "/blog" },
   { label: "Política de Privacidad", to: "/politicas" },
-  { label: "Términos y Condiciones", to: null },
+  { label: "Términos y Condiciones", to: "/terminos" },
   { label: "Preguntas Frecuentes", to: "/faq" },
-  { label: "Envíos y Devoluciones", to: null },
-  { label: "Contacto", to: null },
+  { label: "Envíos y Devoluciones", to: "/envios-y-devoluciones" },
 ];
 
 const linkClasses =
@@ -44,8 +43,13 @@ function ShopLinksNav() {
   return (
     <nav className="flex flex-col gap-3 sm:gap-2">
       {SHOP_LINKS.map((link) => (
-        <Link key={link.label} to={link.to} className={linkClasses}>
+        <Link key={link.label} to={link.to} className={`${linkClasses} flex items-center gap-2`}>
           {link.label}
+          {link.comingSoon && (
+            <span className="text-[10px] font-semibold not-italic uppercase tracking-wide text-secondary/70 border border-surface-border/20 rounded-full px-1.5 py-0.5 leading-none">
+              Próximamente
+            </span>
+          )}
         </Link>
       ))}
     </nav>
@@ -55,17 +59,11 @@ function ShopLinksNav() {
 function CompanyLinksNav() {
   return (
     <nav className="flex flex-col gap-3 sm:gap-2">
-      {COMPANY_LINKS.map((link) =>
-        link.to ? (
-          <Link key={link.label} to={link.to} className={linkClasses}>
-            {link.label}
-          </Link>
-        ) : (
-          <a key={link.label} href="#" onClick={(e) => e.preventDefault()} className={linkClasses}>
-            {link.label}
-          </a>
-        ),
-      )}
+      {COMPANY_LINKS.map((link) => (
+        <Link key={link.label} to={link.to} className={linkClasses}>
+          {link.label}
+        </Link>
+      ))}
     </nav>
   );
 }

@@ -13,7 +13,7 @@ const NAV_LINKS = [
   { label: "Ropa", to: "/ropa" },
   { label: "Accesorios", to: "/accesorios" },
   { label: "Marcas", to: "/marcas" },
-  { label: "Blog", to: "/blog" },
+  { label: "Nosotros", to: "/blog" },
 ];
 
 export function Header({ cartCount, onCartClick }: HeaderProps) {
@@ -39,7 +39,7 @@ export function Header({ cartCount, onCartClick }: HeaderProps) {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-surface-nav border-b border-surface-border/10">
-      <div className="max-w-[1920px] mx-auto px-6 lg:px-[60px] h-16 sm:h-20 flex items-center gap-6 sm:gap-10">
+      <div className="relative max-w-[1920px] mx-auto px-6 lg:px-[60px] h-16 sm:h-20 flex items-center gap-6 sm:gap-10">
         {/* Menú hamburguesa: solo hasta lg (la navegación completa no cabe antes) */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -49,7 +49,13 @@ export function Header({ cartCount, onCartClick }: HeaderProps) {
           {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition cursor-pointer flex-shrink-0">
+        {/* Logo centrado solo en la versión mobile/tablet (hasta lg, donde
+            está el menú hamburguesa); desde lg vuelve a su posición normal
+            en el flujo, junto al menú de navegación. */}
+        <Link
+          to="/"
+          className="absolute left-1/2 -translate-x-1/2 lg:static lg:left-auto lg:translate-x-0 flex items-center gap-2 hover:opacity-80 transition cursor-pointer flex-shrink-0"
+        >
           <img
             src={theme === "light" ? "/imagotipo-dark.svg" : "/imagotipo.svg"}
             alt="THE FORGE"
@@ -107,11 +113,15 @@ export function Header({ cartCount, onCartClick }: HeaderProps) {
           <button
             onClick={onCartClick}
             aria-label="Carrito"
-            className="relative flex items-center justify-center w-14 h-[42px] rounded bg-primary text-primary-foreground hover:bg-opacity-90 transition-all flex-shrink-0"
+            // Shark fijo (no --primary: en modo oscuro es Molten Red, y aquí
+            // se pidió expresamente el cuadro en Shark en ambos temas).
+            className="relative flex items-center justify-center w-14 h-[42px] rounded bg-[#23282D] text-[#DCE6D7] hover:bg-[#23282D]/85 transition-all flex-shrink-0"
           >
             <ShoppingCart size={20} />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-secondary text-foreground w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold">
+              // Molten Red fijo + halo para que el badge resalte con fuerza
+              // sobre el cuadro Shark.
+              <span className="absolute -top-2 -right-2 bg-[#E63946] text-white border-2 border-surface-nav shadow-[0_0_10px_2px_rgba(230,57,70,0.65)] w-5 h-5 rounded-full text-xs flex items-center justify-center font-extrabold">
                 {cartCount}
               </span>
             )}

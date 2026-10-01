@@ -1,39 +1,28 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { X, ChevronLeft, ChevronRight, ChevronDown, Heart, ShoppingCart, LayoutGrid, List as ListIcon, SlidersHorizontal, Flame, Star } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, SlidersHorizontal, Flame, Star, Check } from "lucide-react";
 import { getProducts, type Product } from "@/lib/services/products";
 import { ProductModal } from "@/components/ProductModal";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
-import { useCart, type CartItem } from "@/lib/context/CartContext";
-import { MAX_UNITS_PER_PRODUCT } from "@/lib/constants/cart";
-import { useFavorites } from "@/hooks/use-favorites";
+import { useCart } from "@/lib/context/CartContext";
+import { useModalBackClose } from "@/hooks/use-modal-back-close";
+import { formatItemLabel } from "@/lib/utils/formatItemLabel";
 
 const ITEMS_PER_PAGE = 20;
-
-type SortOption = "relevancia" | "precio-asc" | "precio-desc" | "nombre-asc";
-
-const SORT_LABELS: Record<SortOption, string> = {
-  relevancia: "Relevancia",
-  "precio-asc": "Precio: menor a mayor",
-  "precio-desc": "Precio: mayor a menor",
-  "nombre-asc": "Nombre A-Z",
-};
 
 export default function AllProducts() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("relevancia");
-  const [isSortOpen, setIsSortOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const { cart, addToCart, removeFromCart, updateQuantity } = useCart();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { cart, addToCart, removeFromCart, updateQuantity, clearCart } = useCart();
+  useModalBackClose(!!selectedProduct, () => setSelectedProduct(null));
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -67,38 +56,12 @@ export default function AllProducts() {
     });
   }, [searchQuery, selectedCategory, allProducts]);
 
-  const sortedProducts = useMemo(() => {
-    const arr = [...filteredProducts];
-    switch (sortBy) {
-      case "precio-asc":
-        arr.sort((a, b) => a.price - b.price);
-        break;
-      case "precio-desc":
-        arr.sort((a, b) => b.price - a.price);
-        break;
-      case "nombre-asc":
-        arr.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-    }
-    return arr;
-  }, [filteredProducts, sortBy]);
-
-  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedProducts = sortedProducts.slice(
+  const paginatedProducts = filteredProducts.slice(
     startIndex,
     startIndex + ITEMS_PER_PAGE
   );
-
-  const handleQuickAdd = (e: React.MouseEvent, product: Product) => {
-    e.stopPropagation();
-    if (product.has_variants) {
-      // Con variantes hace falta elegir sabor/tamaño, así que abrimos la ficha
-      setSelectedProduct(product);
-      return;
-    }
-    addToCart(product);
-  };
 
   const getBadge = (product: Product): { label: string; className: string; icon?: boolean } | null => {
     if (product.is_bestseller) {
@@ -114,20 +77,6 @@ export default function AllProducts() {
   const formatPrice = (price: number) =>
     `$${price.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`;
 
-  const getCartQuantity = (productId: string) => {
-    return cart.find((item) => item.id === productId)?.quantity || 0;
-  };
-
-  const getAvailableStock = (item: CartItem): number => {
-    const product = allProducts.find(p => p.id === item.id);
-    if (!product) return 0;
-
-    const stock = item.selectedVariantId && product.variants
-      ? (product.variants.find(v => v.id === item.selectedVariantId)?.quantity ?? 0)
-      : product.quantity;
-    return Math.min(stock, MAX_UNITS_PER_PRODUCT);
-  };
-
   const total = cart.reduce((sum, item) => sum + (item.itemPrice || item.price) * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -135,10 +84,10 @@ export default function AllProducts() {
     const message = cart
       .map((item) => {
         const variantName = item.selectedVariantId
-          ? ` (${item.variants?.find(v => v.id === item.selectedVariantId)?.name})`
-          : "";
+          ? item.variants?.find(v => v.id === item.selectedVariantId)?.name
+          : undefined;
         const itemPrice = item.itemPrice || item.price;
-        return `- ${item.name}${variantName} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
+        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
       })
       .join("\n");
     
@@ -206,7 +155,7 @@ export default function AllProducts() {
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[57px] font-extrabold italic uppercase leading-none mb-3 drop-shadow-lg">
             Todos Los Productos
           </h1>
-          <p className="text-foreground/80 italic text-xs sm:text-sm md:text-base max-w-[490px] leading-relaxed drop-shadow-md">
+          <p className="text-foreground/80 italic text-xs sm:text-sm md:text-base leading-relaxed drop-shadow-md">
             Potencia tu rendimiento. Encuentra los mejores suplementos, de las mejores marcas.
           </p>
         </div>
@@ -216,13 +165,19 @@ export default function AllProducts() {
       <div className="pb-20 max-w-[1920px] mx-auto px-6 lg:px-[60px]">
         {/* Barra de filtros: categorías, orden y vista */}
         <div className="mt-[10px] mb-4 space-y-3">
-          {/* Fila 1: Filtrar + categorías (una sola línea, sin wrap) + Ordenar pegado a la derecha */}
+          {/* Fila 1: categorías (una sola línea, sin wrap) */}
           <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full">
-            <div className="flex items-center gap-6 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex-shrink-0 flex items-center justify-center gap-2.5 h-12 w-[155px] px-4 rounded border border-surface-border/20 text-foreground/80 text-sm font-semibold not-italic uppercase">
-                <SlidersHorizontal size={18} />
-                Filtrar
-              </div>
+            {/* Mobile: las categorías no caben en una fila, Filtrar abre un panel */}
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="sm:hidden flex-shrink-0 flex items-center justify-center gap-2.5 h-12 w-full px-4 rounded border border-surface-border/20 text-foreground/80 text-sm font-semibold not-italic uppercase hover:border-primary/50 transition-colors"
+            >
+              <SlidersHorizontal size={18} />
+              {selectedCategory ? `Filtrar: ${selectedCategory}` : "Filtrar"}
+            </button>
+
+            {/* Tablet/Desktop: solo categorías en línea (sin CTA "Filtrar", no aportaba nada ahí) */}
+            <div className="hidden sm:flex items-center gap-6 overflow-x-auto flex-1 min-w-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                   onClick={() => {
@@ -256,61 +211,6 @@ export default function AllProducts() {
               </div>
             </div>
 
-            {/* Ordenar por: pegado al extremo derecho, nunca se encoge */}
-            <div className="relative flex-shrink-0 w-full sm:w-auto sm:ml-2">
-              <button
-                onClick={() => setIsSortOpen(!isSortOpen)}
-                className="w-full sm:w-[220px] flex items-center justify-between gap-3 h-12 rounded bg-surface-card border border-surface-border/20 px-4 text-sm not-italic uppercase hover:border-primary/50 transition-all whitespace-nowrap"
-              >
-                <span>
-                  <span className="font-medium">Ordenar: </span>
-                  <span className="font-semibold">{SORT_LABELS[sortBy]}</span>
-                </span>
-                <ChevronDown size={16} className={`flex-shrink-0 transition-transform ${isSortOpen ? "rotate-180" : ""}`} />
-              </button>
-              {isSortOpen && (
-                <div className="absolute right-0 mt-1 w-64 bg-surface-card border border-surface-border/20 rounded z-10">
-                  {(Object.keys(SORT_LABELS) as SortOption[]).map((option) => (
-                    <button
-                      key={option}
-                      onClick={() => {
-                        setSortBy(option);
-                        setIsSortOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full text-left px-4 py-3 text-xs sm:text-sm font-medium not-italic uppercase transition-all ${
-                        sortBy === option
-                          ? "bg-primary text-primary-foreground font-semibold"
-                          : "hover:bg-surface-elevated"
-                      }`}
-                    >
-                      {SORT_LABELS[option]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Fila 2: vista, alineada al extremo derecho debajo de Ordenar */}
-          <div className="flex items-center justify-end">
-            {/* Vista: cuadrícula / lista */}
-            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
-              <button
-                onClick={() => setViewMode("grid")}
-                aria-label="Vista de cuadrícula"
-                className={`flex items-center justify-center w-9 h-9 rounded transition-all ${viewMode === "grid" ? "bg-primary text-primary-foreground" : "bg-surface-card text-foreground/60 hover:text-foreground"}`}
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                aria-label="Vista de lista"
-                className={`flex items-center justify-center w-9 h-9 rounded transition-all ${viewMode === "list" ? "bg-primary text-primary-foreground" : "bg-surface-card text-foreground/60 hover:text-foreground"}`}
-              >
-                <ListIcon size={16} />
-              </button>
-            </div>
           </div>
         </div>
 
@@ -321,82 +221,11 @@ export default function AllProducts() {
           </div>
         ) : (
           <>
-            {/* Products Grid / List */}
-            <div
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 sm:mb-12"
-                  : "flex flex-col gap-3 sm:gap-4 mb-10 sm:mb-12"
-              }
-            >
+            {/* Products Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-10 sm:mb-12">
               {paginatedProducts.map((product) => {
                 const badge = getBadge(product);
                 const isSoldOut = product.quantity === 0 && !product.has_variants;
-
-                if (viewMode === "list") {
-                  return (
-                    <div
-                      key={product.id}
-                      className="rounded bg-surface-card border border-surface-border/10 hover:border-primary/50 hover:bg-surface-elevated transition-all group cursor-pointer flex items-center gap-4 p-3 sm:p-4"
-                      onClick={() => setSelectedProduct(product)}
-                    >
-                      <div className="relative w-20 h-20 sm:w-28 sm:h-28 flex-shrink-0 bg-secondary/10 flex items-center justify-center overflow-hidden">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="max-w-full max-h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          draggable="false"
-                        />
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {badge && (
-                            <span className={`px-2 py-0.5 text-[10px] font-bold italic uppercase ${badge.className}`}>
-                              {badge.label}
-                            </span>
-                          )}
-                          <p className="text-primary/80 text-[10px] sm:text-xs font-bold uppercase italic">
-                            {product.category}
-                          </p>
-                        </div>
-                        <h4 className="text-xs sm:text-sm font-extrabold italic uppercase mb-1 line-clamp-1">
-                          {product.name}
-                        </h4>
-                        <span className="text-base sm:text-lg font-extrabold text-primary">
-                          ${product.price}
-                        </span>
-                        {isSoldOut && (
-                          <span className="ml-2 text-xs sm:text-sm font-extrabold text-foreground/50 italic">
-                            Agotado
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(product.id);
-                          }}
-                          aria-label="Favorito"
-                          className="p-2 text-foreground/60 hover:text-primary transition"
-                        >
-                          <Heart size={18} className={isFavorite(product.id) ? "fill-primary text-primary" : ""} />
-                        </button>
-                        <button
-                          onClick={(e) => handleQuickAdd(e, product)}
-                          disabled={isSoldOut}
-                          className="hidden sm:flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 font-extrabold italic uppercase text-xs hover:bg-opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <ShoppingCart size={14} />
-                          Agregar
-                        </button>
-                      </div>
-                    </div>
-                  );
-                }
-
                 const hasRating = product.rating != null && product.reviewCount != null;
 
                 return (
@@ -415,17 +244,6 @@ export default function AllProducts() {
                           {badge.label}
                         </div>
                       )}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleFavorite(product.id);
-                        }}
-                        aria-label="Favorito"
-                        className="absolute top-3 right-3 flex items-center justify-center w-9 h-9 rounded bg-surface-page/40 text-foreground/90 hover:bg-surface-page/70 hover:text-primary transition-colors"
-                      >
-                        <Heart size={16} className={isFavorite(product.id) ? "fill-primary text-primary" : ""} />
-                      </button>
 
                       <img
                         src={product.image_url}
@@ -458,7 +276,7 @@ export default function AllProducts() {
                       )}
 
                       <div className="flex items-center justify-between mb-4">
-                        <span className="text-xl sm:text-[22px] font-extrabold text-primary">
+                        <span className="text-xl sm:text-[22px] font-extrabold text-[#E63946]">
                           {formatPrice(product.price)}
                         </span>
                         {isSoldOut && (
@@ -469,12 +287,13 @@ export default function AllProducts() {
                       </div>
 
                       <button
-                        onClick={(e) => handleQuickAdd(e, product)}
-                        disabled={isSoldOut}
-                        className="mt-auto w-full flex items-center justify-center gap-2 h-11 bg-primary text-primary-foreground font-bold not-italic uppercase text-[13px] hover:bg-opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedProduct(product);
+                        }}
+                        className="mt-auto w-full flex items-center justify-center gap-2 h-11 bg-primary text-primary-foreground font-bold not-italic uppercase text-[13px] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-200 hover:bg-opacity-90"
                       >
-                        <ShoppingCart size={16} />
-                        Agregar al Carrito
+                        Vista Rápida
                       </button>
                     </div>
                   </div>
@@ -538,7 +357,6 @@ export default function AllProducts() {
           product={selectedProduct}
           onClose={() => setSelectedProduct(null)}
           onAddToCart={addToCart}
-          cartQuantity={getCartQuantity(selectedProduct.id)}
           cartCount={cartCount}
           onCartClick={() => setIsCartOpen(true)}
         />
@@ -552,11 +370,21 @@ export default function AllProducts() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Cart Header */}
-            <div className="border-b border-secondary/20 p-4 sm:p-6 flex justify-between items-center">
-              <h2 className="text-xl sm:text-2xl font-extrabold italic uppercase">Tu Carrito</h2>
+            <div className="border-b border-secondary/20 p-4 sm:p-6 flex justify-between items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <h2 className="text-xl sm:text-2xl font-extrabold italic uppercase">Tu Carrito</h2>
+                {cart.length > 0 && (
+                  <button
+                    onClick={clearCart}
+                    className="text-foreground/60 hover:text-primary transition text-xs italic underline flex-shrink-0"
+                  >
+                    Vaciar carrito
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="text-foreground hover:text-primary transition"
+                className="text-foreground hover:text-primary transition flex-shrink-0"
               >
                 <X size={24} />
               </button>
@@ -580,7 +408,7 @@ export default function AllProducts() {
                           {item.name}
                           {item.selectedVariantId && (
                             <span className="text-foreground/70">
-                              {" "}({item.variants?.find(v => v.id === item.selectedVariantId)?.name})
+                              {" · "}{item.variants?.find(v => v.id === item.selectedVariantId)?.name}
                             </span>
                           )}
                         </h4>
@@ -599,7 +427,7 @@ export default function AllProducts() {
                       </span>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedVariantId, allProducts)}
+                          onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedVariantId)}
                           className="bg-secondary/30 text-foreground px-2 py-1 font-bold hover:bg-secondary/50 transition text-xs"
                         >
                           −
@@ -608,9 +436,8 @@ export default function AllProducts() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedVariantId, allProducts)}
-                          disabled={item.quantity >= getAvailableStock(item)}
-                          className="bg-secondary/30 text-foreground px-2 py-1 font-bold hover:bg-secondary/50 transition text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedVariantId)}
+                          className="bg-secondary/30 text-foreground px-2 py-1 font-bold hover:bg-secondary/50 transition text-xs"
                         >
                           +
                         </button>
@@ -621,11 +448,6 @@ export default function AllProducts() {
                       <p className="text-primary font-bold italic text-sm">
                         Subtotal: ${((item.itemPrice || item.price) * item.quantity).toFixed(2)}
                       </p>
-                      {item.quantity >= getAvailableStock(item) && (
-                        <p className="text-xs text-red-500 italic font-bold">
-                          Cantidad máxima alcanzada
-                        </p>
-                      )}
                     </div>
                   </div>
                 ))
@@ -653,6 +475,61 @@ export default function AllProducts() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Panel de filtros (mobile): categorías, ya que ahí no caben en una fila */}
+      {isFilterOpen && (
+        <div
+          className="sm:hidden fixed inset-0 bg-black/50 z-50 flex items-end"
+          onClick={() => setIsFilterOpen(false)}
+        >
+          <div
+            className="bg-surface-page border-t border-surface-border/10 w-full max-h-[75vh] rounded-t-lg flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="border-b border-surface-border/10 p-4 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-lg font-extrabold italic uppercase">Filtrar por categoría</h2>
+              <button
+                onClick={() => setIsFilterOpen(false)}
+                className="text-foreground hover:text-primary transition"
+                aria-label="Cerrar"
+              >
+                <X size={22} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-2">
+              <button
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setCurrentPage(1);
+                  setIsFilterOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded text-sm font-medium not-italic uppercase transition-colors ${
+                  selectedCategory === null ? "text-primary" : "text-foreground hover:bg-surface-card"
+                }`}
+              >
+                Todas
+                {selectedCategory === null && <Check size={18} />}
+              </button>
+              {PRODUCT_CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedCategory(category);
+                    setCurrentPage(1);
+                    setIsFilterOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 rounded text-sm font-medium not-italic uppercase transition-colors ${
+                    selectedCategory === category ? "text-primary" : "text-foreground hover:bg-surface-card"
+                  }`}
+                >
+                  {category}
+                  {selectedCategory === category && <Check size={18} />}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
