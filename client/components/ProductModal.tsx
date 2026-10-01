@@ -6,6 +6,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { parseDescription } from "@/lib/utils/parseProductDescription";
 import { formatItemLabel } from "@/lib/utils/formatItemLabel";
+import { formatMoney } from "@/lib/utils/formatMoney";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProductModalProps {
@@ -248,11 +249,11 @@ export function ProductModal({ product, onClose, onAddToCart, cartCount, onCartC
 
           <div>
             <p className="text-3xl sm:text-4xl font-extrabold text-[#E63946]">
-              ${currentPrice.toFixed(2)}
+              {formatMoney(currentPrice)}
             </p>
             {product.has_variants && selectedVariant && currentPrice !== product.price && (
               <p className="text-xs text-foreground/60 italic mt-1">
-                Precio base: ${product.price.toFixed(2)}
+                Precio base: {formatMoney(product.price)}
               </p>
             )}
           </div>
@@ -316,7 +317,7 @@ export function ProductModal({ product, onClose, onAddToCart, cartCount, onCartC
                   onClick={handleAddToCart}
                   className="flex-1 bg-primary text-primary-foreground px-4 font-extrabold italic uppercase text-xs sm:text-sm hover:bg-opacity-90 transition-all"
                 >
-                  {`Agregar $${(currentPrice * quantity).toFixed(2)}`}
+                  {`Agregar ${formatMoney(currentPrice * quantity)}`}
                 </button>
               </div>
             </div>

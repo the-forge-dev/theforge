@@ -17,6 +17,14 @@ export default function AppWrapper() {
   );
   const [configLoaded, setConfigLoaded] = useState(false);
 
+  // React Router no resetea el scroll al navegar entre rutas (a diferencia
+  // de una navegación normal del navegador) — sin esto, un link como "Ver
+  // Todos Los Productos" al fondo de la home te deja en /productos con el
+  // scroll heredado de la página anterior en vez de arriba del todo.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // Load maintenance mode config on mount
   useEffect(() => {
     const loadConfig = async () => {

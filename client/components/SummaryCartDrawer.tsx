@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useCart } from "@/lib/context/CartContext";
 import { formatItemLabel } from "@/lib/utils/formatItemLabel";
+import { formatMoney } from "@/lib/utils/formatMoney";
 
 interface SummaryCartDrawerProps {
   isOpen: boolean;
@@ -23,12 +24,12 @@ export function SummaryCartDrawer({ isOpen, onClose }: SummaryCartDrawerProps) {
           ? item.variants?.find((v) => v.id === item.selectedVariantId)?.name
           : undefined;
         const itemPrice = item.itemPrice || item.price;
-        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
+        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} ${formatMoney(itemPrice * item.quantity)}`;
       })
       .join("\n");
 
     const whatsappMessage = encodeURIComponent(
-      `Hola, quiero hacer este pedido:\n\n${message}\n\nTotal: $${total.toFixed(2)}`
+      `Hola, quiero hacer este pedido:\n\n${message}\n\nTotal: ${formatMoney(total)}`
     );
 
     window.open(`https://wa.me/4434806689?text=${whatsappMessage}`, "_blank");
@@ -84,7 +85,7 @@ export function SummaryCartDrawer({ isOpen, onClose }: SummaryCartDrawerProps) {
                   </button>
                 </div>
                 <p className="text-foreground/70 italic text-xs sm:text-sm">
-                  {item.quantity} × ${(item.itemPrice || item.price).toFixed(2)}
+                  {item.quantity} × {formatMoney(item.itemPrice || item.price)}
                 </p>
               </div>
             ))
@@ -95,7 +96,7 @@ export function SummaryCartDrawer({ isOpen, onClose }: SummaryCartDrawerProps) {
           <div className="border-t border-surface-border/10 p-4 sm:p-6 space-y-4">
             <div className="bg-surface-card p-4 border border-surface-border/10">
               <p className="text-foreground/70 italic text-xs sm:text-sm mb-2">Total</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-primary">${total.toFixed(2)}</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-primary">{formatMoney(total)}</p>
             </div>
             <button
               onClick={() => {

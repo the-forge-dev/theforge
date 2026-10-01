@@ -9,6 +9,7 @@ import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
 import { useCart } from "@/lib/context/CartContext";
 import { useModalBackClose } from "@/hooks/use-modal-back-close";
 import { formatItemLabel } from "@/lib/utils/formatItemLabel";
+import { formatMoney } from "@/lib/utils/formatMoney";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -49,11 +50,13 @@ export default function AllProducts() {
   };
 
   const filteredProducts = useMemo(() => {
-    return allProducts.filter((product) => {
+    const matches = allProducts.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = !selectedCategory || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
+    // Los más vendidos van primero (orden estable: el resto conserva su orden original).
+    return [...matches].sort((a, b) => Number(b.is_bestseller) - Number(a.is_bestseller));
   }, [searchQuery, selectedCategory, allProducts]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
@@ -65,17 +68,13 @@ export default function AllProducts() {
 
   const getBadge = (product: Product): { label: string; className: string; icon?: boolean } | null => {
     if (product.is_bestseller) {
-      return { label: "Más vendido", className: "bg-amber-500 text-black", icon: true };
+      return { label: "Más vendido", className: "bg-[#C9A227] text-[#23282D]", icon: true };
     }
     if (product.has_variants) {
       return { label: "Variantes", className: "bg-primary text-primary-foreground" };
     }
     return null;
   };
-
-  // $949, $1,029 — formato de miles sin alterar el valor real del precio.
-  const formatPrice = (price: number) =>
-    `$${price.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`;
 
   const total = cart.reduce((sum, item) => sum + (item.itemPrice || item.price) * item.quantity, 0);
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -87,12 +86,12 @@ export default function AllProducts() {
           ? item.variants?.find(v => v.id === item.selectedVariantId)?.name
           : undefined;
         const itemPrice = item.itemPrice || item.price;
-        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
+        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} ${formatMoney(itemPrice * item.quantity)}`;
       })
       .join("\n");
-    
+
     const whatsappMessage = encodeURIComponent(
-      `Hola, quiero hacer este pedido:\n\n${message}\n\nTotal: $${total.toFixed(2)}`
+      `Hola, quiero hacer este pedido:\n\n${message}\n\nTotal: ${formatMoney(total)}`
     );
     
     window.open(
@@ -235,12 +234,13 @@ export default function AllProducts() {
                     onClick={() => setSelectedProduct(product)}
                   >
                     {/* Zona de imagen: superficie base de la card */}
-                    <div className="relative w-full h-44 sm:h-52 md:h-60 lg:h-72 xl:h-[310px] overflow-hidden bg-surface-card px-5 py-4 flex items-center justify-center">
+                    <div className="relative w-full h-52 sm:h-52 md:h-60 lg:h-72 xl:h-[310px] overflow-hidden bg-surface-card px-5 pt-9 pb-4 sm:py-4 flex items-center justify-center">
                       {badge && (
                         <div
-                          className={`absolute top-3 left-3 inline-flex items-center gap-1 h-7 px-3 rounded-[6px] text-xs font-semibold not-italic uppercase ${badge.className}`}
+                          className={`absolute top-3 left-3 inline-flex items-center gap-1 h-5 px-2 sm:h-7 sm:px-3 rounded-[6px] text-[10px] sm:text-xs font-semibold not-italic uppercase ${badge.className}`}
                         >
-                          {badge.icon && <Flame size={12} />}
+                          {badge.icon && <Flame size={10} className="animate-flame sm:hidden" />}
+                          {badge.icon && <Flame size={12} className="animate-flame hidden sm:block" />}
                           {badge.label}
                         </div>
                       )}
@@ -277,7 +277,7 @@ export default function AllProducts() {
 
                       <div className="flex items-center justify-between mb-4">
                         <span className="text-xl sm:text-[22px] font-extrabold text-[#E63946]">
-                          {formatPrice(product.price)}
+                          {formatMoney(product.price)}
                         </span>
                         {isSoldOut && (
                           <span className="text-xs sm:text-sm font-bold text-foreground/50 not-italic">
@@ -423,7 +423,7 @@ export default function AllProducts() {
 
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-foreground/70 italic text-xs sm:text-sm">
-                        ${(item.itemPrice || item.price).toFixed(2)}
+                        {formatMoney(item.itemPrice || item.price)}
                       </span>
                       <div className="flex items-center gap-1">
                         <button
@@ -446,7 +446,7 @@ export default function AllProducts() {
 
                     <div className="border-t border-secondary/20 pt-2 space-y-2">
                       <p className="text-primary font-bold italic text-sm">
-                        Subtotal: ${((item.itemPrice || item.price) * item.quantity).toFixed(2)}
+                        Subtotal: {formatMoney((item.itemPrice || item.price) * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -460,7 +460,7 @@ export default function AllProducts() {
                 <div className="bg-secondary/10 p-4 border border-secondary/30">
                   <p className="text-foreground/70 italic text-xs sm:text-sm mb-2">Total</p>
                   <p className="text-2xl sm:text-3xl font-extrabold text-primary">
-                    ${total.toFixed(2)}
+                    {formatMoney(total)}
                   </p>
                 </div>
 

@@ -200,3 +200,22 @@
     z-index: 0;
   }
 }
+
+/* Parpadeo sutil del ícono de fuego en el badge "Más Vendido". */
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  25% { transform: scale(1.1, 0.92) rotate(-4deg); opacity: 0.88; }
+  50% { transform: scale(0.94, 1.08) rotate(3deg); opacity: 1; }
+  75% { transform: scale(1.06, 0.96) rotate(-2deg); opacity: 0.92; }
+}
+
+.animate-flame {
+  animation: flame-flicker 1.4s ease-in-out infinite;
+  transform-origin: 50% 85%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flame {
+    animation: none;
+  }
+}

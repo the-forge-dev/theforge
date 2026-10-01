@@ -4,6 +4,7 @@ import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
 import type { Product, ProductVariant } from "@/lib/services/products";
 import { uploadProductImage } from "@/lib/services/storage";
 import { parseDescription, buildDescription } from "@/lib/utils/parseProductDescription";
+import { formatMoney } from "@/lib/utils/formatMoney";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProductFormProps {
@@ -438,7 +439,7 @@ export function ProductForm({ product, imagePreview: initialPreview, onSave, onC
                             <p className="font-bold italic text-sm">{variant.name}</p>
                             <div className="flex gap-3 text-xs text-foreground/70 italic flex-wrap">
                               <span>Stock: {variant.quantity}</span>
-                              {variant.price && <span>Precio: ${variant.price.toFixed(2)}</span>}
+                              {variant.price && <span>Precio: {formatMoney(variant.price)}</span>}
                               {(variant.image_urls?.length || 0) > 1 && <span>{variant.image_urls!.length} fotos</span>}
                               {variant.nutrition_facts_url && <span>Con tabla nutrimental</span>}
                             </div>

@@ -6,6 +6,7 @@ import { useMaintenanceMode } from "@/hooks/use-maintenance";
 import { getProducts, createProduct, updateProduct, deleteProduct, type Product } from "@/lib/services/products";
 import { useToast } from "@/hooks/use-toast";
 import { ProductForm } from "@/components/ProductForm";
+import { formatMoney } from "@/lib/utils/formatMoney";
 import { PRODUCT_CATEGORIES } from "@/lib/constants/categories";
 import { useTheme } from "@/lib/context/ThemeContext";
 
@@ -469,7 +470,7 @@ export default function Admin() {
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div>
                         <p className="text-xs text-foreground/60 italic uppercase">Precio</p>
-                        <p className="text-2xl font-extrabold text-primary">${product.price}</p>
+                        <p className="text-2xl font-extrabold text-primary">{formatMoney(product.price)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-xs text-foreground/60 italic uppercase">Cantidad</p>

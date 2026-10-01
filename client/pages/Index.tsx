@@ -10,6 +10,7 @@ import { useCart } from "@/lib/context/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useModalBackClose } from "@/hooks/use-modal-back-close";
 import { formatItemLabel } from "@/lib/utils/formatItemLabel";
+import { formatMoney } from "@/lib/utils/formatMoney";
 
 const HERO_SLIDES: HeroSlide[] = [
   {
@@ -86,12 +87,12 @@ export default function Index() {
           ? item.variants?.find(v => v.id === item.selectedVariantId)?.name
           : undefined;
         const itemPrice = item.itemPrice || item.price;
-        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} $${(itemPrice * item.quantity).toFixed(2)}`;
+        return `- ${formatItemLabel(item.name, variantName)} x${item.quantity} ${formatMoney(itemPrice * item.quantity)}`;
       })
       .join("\n");
-    
+
     const whatsappMessage = encodeURIComponent(
-      `Hola, quiero hacer este pedido:\n\n${message}\n\nTotal: $${total.toFixed(2)}`
+      `Hola, quiero hacer este pedido:\n\n${message}\n\nTotal: ${formatMoney(total)}`
     );
     
     window.open(
@@ -216,7 +217,7 @@ export default function Index() {
 
                         <div className="flex justify-between items-center pt-2">
                           <span className="text-lg sm:text-xl font-extrabold text-[#E63946]">
-                            ${product.price}
+                            {formatMoney(product.price)}
                           </span>
                           {product.quantity === 0 && !product.has_variants && (
                             <span className="text-xs sm:text-sm font-extrabold text-foreground/50 italic">
@@ -318,7 +319,7 @@ export default function Index() {
 
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-foreground/70 italic text-xs sm:text-sm">
-                        ${(item.itemPrice || item.price).toFixed(2)}
+                        {formatMoney(item.itemPrice || item.price)}
                       </span>
                       <div className="flex items-center gap-1">
                         <button
@@ -341,7 +342,7 @@ export default function Index() {
 
                     <div className="border-t border-secondary/20 pt-2 space-y-2">
                       <p className="text-primary font-bold italic text-sm">
-                        Subtotal: ${((item.itemPrice || item.price) * item.quantity).toFixed(2)}
+                        Subtotal: {formatMoney((item.itemPrice || item.price) * item.quantity)}
                       </p>
                     </div>
                   </div>
@@ -355,7 +356,7 @@ export default function Index() {
                 <div className="bg-secondary/10 p-4 border border-secondary/30">
                   <p className="text-foreground/70 italic text-xs sm:text-sm mb-2">Total</p>
                   <p className="text-2xl sm:text-3xl font-extrabold text-primary">
-                    ${total.toFixed(2)}
+                    {formatMoney(total)}
                   </p>
                 </div>
 
