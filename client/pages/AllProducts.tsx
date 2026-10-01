@@ -30,6 +30,12 @@ export default function AllProducts() {
     loadProducts();
   }, []);
 
+  // Al cambiar de página, el scroll se quedaba donde estaba (ej. hasta abajo
+  // en la página 1), dejando al usuario en medio de la nueva página.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
+
   // El buscador del navbar navega a /productos?q=... — lo tomamos de la URL
   // en vez de duplicar la lógica de búsqueda, que ya vive en filteredProducts.
   useEffect(() => {
@@ -311,7 +317,7 @@ export default function AllProducts() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
+              <div className="flex flex-row justify-center items-center gap-2 sm:gap-4">
                 <button
                   onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
@@ -321,7 +327,7 @@ export default function AllProducts() {
                   <span className="hidden sm:inline">Anterior</span>
                 </button>
 
-                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto max-w-xs sm:max-w-none">
+                <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto max-w-[140px] sm:max-w-none">
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                     <button
                       key={page}
